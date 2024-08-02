@@ -1,5 +1,0 @@
-kafka_connect/rsa*
-kafka_connect/snowflake_connector_config*
-shadowtraffic/license.env
-snowflake/kafka_connector.sql
-.gitignore
