@@ -1,6 +1,13 @@
 {
   "generators" : [ {
     "topic" : "customers",
+    "vars": {
+      "delay": {
+        "_gen": "normalDistribution",
+        "mean": 500,
+        "sd": 40
+      }
+    },
     "value" : {
       "customerId" : {
         "_gen" : "uuid"
@@ -30,37 +37,192 @@
         "_gen" : "oneOf",
         "choices" : [ "bronze", "silver", "gold" ]
       }
+    },
+    "localConfigs": {
+        "throttle": { 
+            "ms": {
+                "_gen": "var",
+                "var": "delay"
+            } 
+          }
     }
-  }, {
-    "topic" : "orders",
-    "value" : {
-      "orderId" : {
-        "_gen" : "uuid"
-      },
-      "customerId" : {
-        "_gen" : "lookup",
-        "topic" : "customers",
-        "path" : [ "value", "customerId" ]
-      },
-      "orderDate" : {
-        "_gen" : "formatDateTime",
-        "ms" : {
-          "_gen" : "now"
-        },
-        "format" : "yyyy-MM-dd"
-      },
-      "cost" : {
-        "_gen" : "normalDistribution",
-        "mean" : 50,
-        "sd" : 20,
-        "decimals" : 2
-      },
-      "creditCardNumber" : {
-        "_gen" : "string",
-        "expr" : "#{Finance.credit_card}"
+  }, 
+  {
+    "topic": "orders",
+    "vars": {
+      "delay": {
+        "_gen": "normalDistribution",
+        "mean": 500,
+        "sd": 40
       }
+    },
+    "value": {
+        "orderId": {
+            "_gen": "uuid"
+        },
+        "customerId": {
+            "_gen": "lookup",
+            "topic": "customers",
+            "path": [
+                "value",
+                "customerId"
+            ],
+            "histogram": {
+              "_gen": "histogram",
+              "bins": [
+                {
+                  "bin": 0.2,
+                  "frequency": 8
+                },
+                {
+                  "bin": 0.8,
+                  "frequency": 2
+                }
+              ]
+            }
+        },
+        "creditCardNumber" : {
+            "_gen" : "string",
+            "expr" : "#{Finance.credit_card}"
+        },
+        "price": {
+            "_gen" : "normalDistribution",
+            "mean" : 50,
+            "sd" : 20,
+            "decimals" : 2
+        },
+        "timestamp": {
+          "_gen": "now"
+        }
+    },
+    "localConfigs": {
+        "throttle": { 
+            "ms": {
+                "_gen": "var",
+                "var": "delay"
+            } 
+          }
     }
-  } ],
+  },
+  {
+    "topic": "funnelEvents",
+    "fork": {
+        "key": {
+            "_gen": "lookup",
+            "topic": "customers",
+            "path": [ "value", "customerId" ],
+            "histogram": {
+              "_gen": "histogram",
+              "bins": [
+                {
+                  "bin": 0.2,
+                  "frequency": 8
+                },
+                {
+                  "bin": 0.8,
+                  "frequency": 2
+                }
+              ]
+            }
+        },
+        "stagger": { "ms": 200 }
+    },
+    "key": { "_gen": "var", "var": "forkKey" },
+    "value": {},
+    "stateMachine": {
+        "_gen": "stateMachine",
+        "initial": "viewLandingPage",
+        "transitions": {
+            "viewLandingPage": {
+                "_gen": "oneOf",
+                "choices": [
+                  "addItemToCart",
+                  "bounce"
+                ]
+            },
+            "addItemToCart": {
+                "_gen": "oneOf",
+                "choices": [
+                    "viewCart",
+                    "addItemToCart"
+                ]
+            },
+            "viewCart": {
+              "_gen": "oneOf",
+              "choices": [
+                "checkout",
+                "bounce",
+                "viewLandingPage"
+              ]
+          }
+        },
+        "states": {
+            "viewLandingPage": {
+                "value": {
+                    "stageName": "landingPage",
+                    "userId": { "_gen": "var", "var": "forkKey" },
+                    "referrer": {
+                        "_gen": "string",
+                        "expr": "#{Internet.url}"
+                    }
+                }
+            },
+            "bounce": {
+                "value": {
+                    "stageName": "bounce",
+                    "userId": { "_gen": "var", "var": "forkKey" },
+                    "timestamp": {
+                        "_gen": "now"
+                    }
+                }
+            },
+            "addItemToCart": {
+                "value": {
+                    "stageName": "addItem",
+                    "userId": { "_gen": "var", "var": "forkKey" },
+                    "item": {
+                        "_gen": "string",
+                        "expr": "#{Commerce.productName}"
+                    }
+                }
+            },
+            "viewCart": {
+                "value": {
+                    "stageName": "checkCart",
+                    "userId": { "_gen": "var", "var": "forkKey" },
+                    "timestamp": {
+                        "_gen": "now"
+                    }
+                }
+            },
+            "checkout": {
+                "value": {
+                    "stageName": "purchase",
+                    "userId": { "_gen": "var", "var": "forkKey" },
+                    "orderId": {
+                      "_gen": "lookup",
+                      "topic": "orders",
+                      "path": [
+                          "value",
+                          "orderId"
+                      ]
+                    },
+                    "price": {
+                      "_gen": "lookup",
+                      "topic": "orders",
+                      "path": [
+                          "value",
+                          "price"
+                      ]
+                    }
+                }
+            }
+        }
+    },
+    "localConfigs": {
+        "throttle": { "ms": 800 }
+    }
+} ],
   "connections" : {
     "localKafka" : {
       "kind" : "kafka",

@@ -1,0 +1,4 @@
+kafka_connect/rsa*
+kafka_connect/snowdlake_connector_config.json
+shadowtraffic/license.env
+snowflake/kafka_connector.sql

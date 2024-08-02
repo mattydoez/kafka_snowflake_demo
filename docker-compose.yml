@@ -47,7 +47,6 @@ services:
       - kafka
       - zookeeper
 
-
   shadowtraffic:
     image: shadowtraffic/shadowtraffic:latest
     volumes:
