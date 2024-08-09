@@ -1,0 +1,21 @@
+{
+    "name": "snowflake-connector",
+    "config": {
+      "connector.class": "com.snowflake.kafka.connector.SnowflakeSinkConnector",
+      "tasks.max": "8",
+      "topics": "customers, orders, funnelEvents",
+      "snowflake.topic2table.map": "customers:customers,orders:orders, funnelEvents:funnelEvents",
+      "snowflake.url.name": "https://<snowflake_account_id>.snowflakecomputing.com",
+      "snowflake.user.name": "<snowflake_Account_username>",
+      "snowflake.private.key": "<created_private_key>",
+      "snowflake.database.name": "<snowflake_db_name>",
+      "snowflake.schema.name": "<snowflake_schema_name>",
+      "snowflake.schema.evolution": "true",
+      "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter.schemas.enable": "false",
+      "buffer.count.records": "10000",
+      "buffer.size.bytes": "5000000",
+      "buffer.flush.time": "60"
+    }
+  }

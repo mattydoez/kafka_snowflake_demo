@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    depends_on:
+      - zookeeper
+    
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    platform: linux/amd64
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms32M -Xmx64M"
+    depends_on:
+      - kafka
+  
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:latest
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+    volumes:
+      - ./kafka_connect/connect-distributed.properties:/etc/kafka-connect/connect-distributed.properties
+      - ./kafka_connect/snowflake-kafka-connector-1.7.1.jar:/usr/share/java/kafka-connect-snowflake/snowflake-kafka-connector-1.7.1.jar
+    command: ["sh", "-c", "connect-distributed /etc/kafka-connect/connect-distributed.properties"]
+    depends_on:
+      - kafka
+      - zookeeper
+
+  shadowtraffic:
+    image: shadowtraffic/shadowtraffic:latest
+    volumes:
+      - ./shadowtraffic:/shadowtraffic
+    entrypoint: ["java", "-jar", "/home/shadowtraffic.jar"]
+    command: ["--config", "/shadowtraffic/customers-orders.json"]
+    env_file:
+      - ./shadowtraffic/license.env
+    depends_on:
+      - kafka
