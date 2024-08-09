@@ -34,6 +34,8 @@ base64 rsa_key.p8 > rsa_key_base64.txt
 "snowflake.schema.name": "<snowflake_schema_name>"
 ```
 
+4. Prepare Snowflake for ingesting the data by running the commands in the *example_kafka_connector.sql* file from within Snowflake. The only change needed here is to add in the .pub key where it says '<created_private_key>'.
+
 
 ### Setting Up Services
 
